@@ -12,13 +12,18 @@ const isNonEmptyString = (value) =>
 const fail = (res, message, code = 'VALIDATION_ERROR', status = 400) =>
   res.status(status).json({ error: message, code });
 
-// PHASE 3 TEMPORARY: actor (userId + role) is sent in the body. JWT in phase 4.
+// PHASE 3 TEMPORARY: actor (userId + role) comes from the body (tests/tools) or
+// the query string (browser GET requests, which cannot carry a body). The
+// resolved actor is stashed on req.actor. Phase 4 replaces this with the JWT
+// auth middleware populating req.actor from the verified token.
 const validateActor = (req, res, next) => {
-  const { userId, role } = req.body || {};
+  const userId = req.body?.userId ?? req.query?.userId;
+  const role = req.body?.role ?? req.query?.role;
   if (!isNonEmptyString(userId)) return fail(res, 'userId is required');
   if (!VALID_ROLES.includes(role)) {
     return fail(res, 'role must be STUDENT or TEACHER');
   }
+  req.actor = { userId, role };
   return next();
 };
 

@@ -15,7 +15,11 @@ const getDoubtsByStudent = (studentId) =>
   });
 
 const getAllDoubts = () =>
-  prisma.doubt.findMany({ orderBy: { createdAt: 'desc' } });
+  prisma.doubt.findMany({
+    orderBy: { createdAt: 'desc' },
+    // Only the student's name is exposed — never email/password.
+    include: { student: { select: { id: true, name: true } } },
+  });
 
 const getDoubtById = (id) => prisma.doubt.findUnique({ where: { id } });
 

@@ -1,13 +1,14 @@
 const doubtService = require('../services/doubtService');
 
 /*
- * PHASE 3 TEMPORARY: userId and role are read from the request body.
- * Phase 4 replaces this with values from the verified JWT (auth middleware),
- * per the security rule "never trust client-sent userId".
+ * PHASE 3 TEMPORARY: the actor (userId + role) is resolved by validateActor from
+ * the request body/query and stashed on req.actor. Phase 4 replaces that with the
+ * verified JWT, per the security rule "never trust client-sent userId".
  */
 
 const submitDoubt = async (req, res, next) => {
-  const { userId, role, question, subject, priority } = req.body;
+  const { userId, role } = req.actor;
+  const { question, subject, priority } = req.body;
   if (role !== 'STUDENT') {
     return res
       .status(403)
@@ -27,7 +28,7 @@ const submitDoubt = async (req, res, next) => {
 };
 
 const getMyDoubts = async (req, res, next) => {
-  const { userId, role } = req.body;
+  const { userId, role } = req.actor;
   if (role !== 'STUDENT') {
     return res
       .status(403)
@@ -42,7 +43,7 @@ const getMyDoubts = async (req, res, next) => {
 };
 
 const getAllDoubts = async (req, res, next) => {
-  const { role } = req.body;
+  const { role } = req.actor;
   if (role !== 'TEACHER') {
     return res
       .status(403)
@@ -57,7 +58,7 @@ const getAllDoubts = async (req, res, next) => {
 };
 
 const resolveDoubt = async (req, res, next) => {
-  const { role, userId } = req.body;
+  const { role, userId } = req.actor;
   const { id } = req.params;
   if (role !== 'TEACHER') {
     return res
