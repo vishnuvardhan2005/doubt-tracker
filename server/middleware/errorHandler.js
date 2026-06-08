@@ -1,7 +1,11 @@
 const { Prisma } = require('@prisma/client');
 const logger = require('../config/logger');
 
-const isProduction = () => process.env.NODE_ENV === 'production';
+// Internals (stack traces) are exposed only when explicitly in a dev/test env.
+// Anything else — including an unset or misconfigured NODE_ENV in production —
+// fails safe and hides them.
+const exposeInternals = () =>
+  process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
 
 // 404 handler — mounted after all routes, before the error handler.
 const notFound = (req, res) => {
@@ -32,13 +36,13 @@ const classify = (err) => {
     };
   }
 
-  // Respect an explicit HTTP status set by application code.
+  // Respect an explicit HTTP status set by application code. Only client-error
+  // (4xx) messages are echoed back; 5xx messages may carry internals, so they
+  // are replaced with a generic string.
   if (typeof err.status === 'number') {
-    return {
-      status: err.status,
-      code: err.code || 'ERROR',
-      message: err.message || 'Request failed',
-    };
+    const safeMessage =
+      err.status < 500 ? err.message || 'Request failed' : 'Internal server error';
+    return { status: err.status, code: err.code || 'ERROR', message: safeMessage };
   }
 
   // Everything else is an unexpected server error.
@@ -56,8 +60,9 @@ const errorHandler = (err, req, res, next) => {
 
   const body = { error: message, code };
 
-  // Stack traces are surfaced to clients outside production only — never in prod.
-  if (!isProduction() && err.stack) {
+  // Stack traces are surfaced only in an explicit dev/test env — never in prod
+  // and never when NODE_ENV is unset (fail safe).
+  if (exposeInternals() && err.stack) {
     body.stack = err.stack;
   }
 

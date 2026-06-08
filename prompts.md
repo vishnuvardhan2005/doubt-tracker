@@ -72,3 +72,14 @@ Tests to cover:
 
 Use a separate test database. Add TEST_DATABASE_URL to .env.example
 Reset the DB before each test using prisma.$transaction to clean tables.
+
+### Review
+Review everything you just built in phase 3.
+Check for:
+1. Any SOLID violations — functions doing too much
+2. Any layer calling another layer it shouldn't
+3. Any endpoint that could leak another user's data
+4. Any error that could expose internals in production
+5. Anything that'll be hard to extend when we add auth in phase 4
+
+List issues found. Fix anything critical before I commit.
