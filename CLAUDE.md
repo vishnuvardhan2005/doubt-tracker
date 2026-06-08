@@ -24,7 +24,7 @@ Runtime:
 - react, react-dom (client)
 
 Dev:
-- prisma, jest, supertest (server)
+- prisma, jest, supertest, ts-jest, typescript, @types/* (server)
 - vite, @vitejs/plugin-react, tailwindcss, @tailwindcss/vite, eslint + plugins (client)
 - concurrently (root — runs client + server together)
 

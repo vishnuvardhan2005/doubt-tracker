@@ -7,14 +7,19 @@
   "scripts": {
     "dev": "node --watch --env-file=.env server.js",
     "start": "node --env-file=.env server.js",
-    "test": "jest",
+    "test": "node --env-file=.env node_modules/jest/bin/jest.js --runInBand",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "node --env-file=.env prisma/seed.ts",
     "db:studio": "prisma studio"
   },
   "jest": {
-    "testEnvironment": "node"
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "globalSetup": "<rootDir>/tests/globalSetup.js",
+    "setupFiles": [
+      "<rootDir>/tests/setupEnv.js"
+    ]
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
@@ -24,8 +29,13 @@
     "jsonwebtoken": "^9.0.3"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^25.9.2",
+    "@types/supertest": "^7.2.0",
     "jest": "^30.4.2",
     "prisma": "^6.19.3",
-    "supertest": "^7.2.2"
+    "supertest": "^7.2.2",
+    "ts-jest": "^29.4.11",
+    "typescript": "^6.0.3"
   }
 }
