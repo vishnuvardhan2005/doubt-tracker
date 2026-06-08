@@ -5,7 +5,6 @@ import { SUBJECTS, PRIORITIES } from '../constants';
 const inputClass = 'w-full rounded border border-gray-300 px-3 py-2 text-sm';
 
 export default function SubmitDoubt() {
-  const [userId, setUserId] = useState('');
   const [question, setQuestion] = useState('');
   const [subject, setSubject] = useState(SUBJECTS[0]);
   const [priority, setPriority] = useState('MEDIUM');
@@ -16,14 +15,14 @@ export default function SubmitDoubt() {
     e.preventDefault();
     setStatus(null);
 
-    if (!userId.trim() || !question.trim()) {
-      setStatus({ type: 'error', message: 'User ID and question are required.' });
+    if (!question.trim()) {
+      setStatus({ type: 'error', message: 'Question is required.' });
       return;
     }
 
     setSubmitting(true);
     try {
-      const doubt = await submitDoubt(userId.trim(), {
+      const doubt = await submitDoubt({
         question: question.trim(),
         subject,
         priority,
@@ -39,18 +38,6 @@ export default function SubmitDoubt() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="mb-1 block text-sm font-medium">
-          Your user ID (temporary)
-        </label>
-        <input
-          className={inputClass}
-          value={userId}
-          onChange={(e) => setUserId(e.target.value)}
-          placeholder="student id"
-        />
-      </div>
-
       <div>
         <label className="mb-1 block text-sm font-medium">Question</label>
         <textarea

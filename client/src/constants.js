@@ -8,3 +8,5 @@ export const SUBJECTS = [
 ];
 
 export const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH'];
+
+export const ROLES = ['STUDENT', 'TEACHER'];

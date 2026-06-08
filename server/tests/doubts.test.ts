@@ -1,8 +1,10 @@
 import request from 'supertest';
 import app from '../app';
 import prisma from '../services/prismaClient';
+const { signToken, COOKIE_NAME } = require('../config/jwt');
 
 type Role = 'STUDENT' | 'TEACHER';
+type User = { id: string; role: Role; email: string };
 
 const createUser = (role: Role, email: string) =>
   prisma.user.create({
@@ -13,6 +15,16 @@ const createUser = (role: Role, email: string) =>
       role,
     },
   });
+
+// Mint the same httpOnly auth cookie the login endpoint would set, so requests
+// carry a verified identity exactly as they do in production.
+const authCookie = (user: User) => [
+  `${COOKIE_NAME}=${signToken({
+    userId: user.id,
+    role: user.role,
+    email: user.email,
+  })}`,
+];
 
 beforeEach(async () => {
   // Reset the test DB before every test. Doubts first — they FK to users.
@@ -30,13 +42,14 @@ describe('POST /api/doubts', () => {
   it('creates a doubt for a student (happy path)', async () => {
     const student = await createUser('STUDENT', 'student@test.dev');
 
-    const res = await request(app).post('/api/doubts').send({
-      userId: student.id,
-      role: 'STUDENT',
-      question: 'Why does recursion overflow the stack?',
-      subject: 'Computer Science',
-      priority: 'HIGH',
-    });
+    const res = await request(app)
+      .post('/api/doubts')
+      .set('Cookie', authCookie(student))
+      .send({
+        question: 'Why does recursion overflow the stack?',
+        subject: 'Computer Science',
+        priority: 'HIGH',
+      });
 
     expect(res.status).toBe(201);
     expect(res.body).toMatchObject({
@@ -53,7 +66,8 @@ describe('POST /api/doubts', () => {
 
     const res = await request(app)
       .post('/api/doubts')
-      .send({ userId: student.id, role: 'STUDENT', subject: 'Maths' });
+      .set('Cookie', authCookie(student))
+      .send({ subject: 'Maths' });
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe('VALIDATION_ERROR');
@@ -64,7 +78,8 @@ describe('POST /api/doubts', () => {
 
     const res = await request(app)
       .post('/api/doubts')
-      .send({ userId: student.id, role: 'STUDENT', question: 'Why?' });
+      .set('Cookie', authCookie(student))
+      .send({ question: 'Why?' });
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe('VALIDATION_ERROR');
@@ -85,7 +100,7 @@ describe('GET /api/doubts/mine', () => {
 
     const res = await request(app)
       .get('/api/doubts/mine')
-      .send({ userId: student1.id, role: 'STUDENT' });
+      .set('Cookie', authCookie(student1));
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(2);
@@ -94,13 +109,11 @@ describe('GET /api/doubts/mine', () => {
     ).toBe(true);
   });
 
-  it('rejects a request with no userId (400)', async () => {
-    const res = await request(app)
-      .get('/api/doubts/mine')
-      .send({ role: 'STUDENT' });
+  it('rejects an unauthenticated request (401)', async () => {
+    const res = await request(app).get('/api/doubts/mine');
 
-    expect(res.status).toBe(400);
-    expect(res.body.code).toBe('VALIDATION_ERROR');
+    expect(res.status).toBe(401);
+    expect(res.body.code).toBe('UNAUTHENTICATED');
   });
 });
 
@@ -118,7 +131,7 @@ describe('GET /api/doubts', () => {
 
     const res = await request(app)
       .get('/api/doubts')
-      .send({ userId: teacher.id, role: 'TEACHER' });
+      .set('Cookie', authCookie(teacher));
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(2);
@@ -129,7 +142,7 @@ describe('GET /api/doubts', () => {
 
     const res = await request(app)
       .get('/api/doubts')
-      .send({ userId: student.id, role: 'STUDENT' });
+      .set('Cookie', authCookie(student));
 
     expect(res.status).toBe(403);
     expect(res.body.code).toBe('FORBIDDEN');
@@ -146,7 +159,7 @@ describe('PATCH /api/doubts/:id/resolve', () => {
 
     const res = await request(app)
       .patch(`/api/doubts/${doubt.id}/resolve`)
-      .send({ userId: teacher.id, role: 'TEACHER' });
+      .set('Cookie', authCookie(teacher));
 
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({
@@ -161,7 +174,7 @@ describe('PATCH /api/doubts/:id/resolve', () => {
 
     const res = await request(app)
       .patch('/api/doubts/00000000-0000-0000-0000-000000000000/resolve')
-      .send({ userId: teacher.id, role: 'TEACHER' });
+      .set('Cookie', authCookie(teacher));
 
     expect(res.status).toBe(404);
     expect(res.body.code).toBe('NOT_FOUND');

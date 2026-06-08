@@ -1,43 +1,35 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getAllDoubts, resolveDoubt } from '../api';
 import { StatusBadge, PriorityBadge } from './Badges';
 
-const inputClass = 'flex-1 rounded border border-gray-300 px-3 py-2 text-sm';
-
 export default function AllDoubts() {
-  const [teacherId, setTeacherId] = useState('');
   const [doubts, setDoubts] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false);
   const [resolvingId, setResolvingId] = useState(null);
 
-  const load = async (e) => {
-    if (e) e.preventDefault();
+  const load = async () => {
     setError(null);
-
-    if (!teacherId.trim()) {
-      setError('Enter a teacher ID.');
-      return;
-    }
-
-    setLoading(true);
     try {
-      const data = await getAllDoubts(teacherId.trim());
+      const data = await getAllDoubts();
       setDoubts(data);
-      setLoaded(true);
     } catch (err) {
       setError(err.message);
     } finally {
-      setLoading(false);
+      setLoaded(true);
     }
   };
+
+  // Identity comes from the auth cookie, so just load on mount.
+  useEffect(() => {
+    load();
+  }, []);
 
   const handleResolve = async (id) => {
     setError(null);
     setResolvingId(id);
     try {
-      await resolveDoubt(id, teacherId.trim());
+      await resolveDoubt(id);
       await load();
     } catch (err) {
       setError(err.message);
@@ -46,25 +38,12 @@ export default function AllDoubts() {
     }
   };
 
+  if (!loaded) return <p className="text-sm text-gray-500">Loading…</p>;
+
   return (
     <div className="space-y-4">
-      <form onSubmit={load} className="flex gap-2">
-        <input
-          className={inputClass}
-          value={teacherId}
-          onChange={(e) => setTeacherId(e.target.value)}
-          placeholder="your teacher ID"
-        />
-        <button
-          className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-          disabled={loading}
-        >
-          {loading ? 'Loading…' : 'Load'}
-        </button>
-      </form>
-
       {error && <p className="text-sm text-red-600">{error}</p>}
-      {loaded && !error && doubts.length === 0 && (
+      {doubts.length === 0 && !error && (
         <p className="text-sm text-gray-500">No doubts.</p>
       )}
 

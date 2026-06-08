@@ -1,9 +1,9 @@
 const express = require('express');
 const controller = require('../controllers/doubtController');
+const { authenticate, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 
-const VALID_ROLES = ['STUDENT', 'TEACHER'];
 const VALID_PRIORITIES = ['LOW', 'MEDIUM', 'HIGH'];
 
 const isNonEmptyString = (value) =>
@@ -11,21 +11,6 @@ const isNonEmptyString = (value) =>
 
 const fail = (res, message, code = 'VALIDATION_ERROR', status = 400) =>
   res.status(status).json({ error: message, code });
-
-// PHASE 3 TEMPORARY: actor (userId + role) comes from the body (tests/tools) or
-// the query string (browser GET requests, which cannot carry a body). The
-// resolved actor is stashed on req.actor. Phase 4 replaces this with the JWT
-// auth middleware populating req.actor from the verified token.
-const validateActor = (req, res, next) => {
-  const userId = req.body?.userId ?? req.query?.userId;
-  const role = req.body?.role ?? req.query?.role;
-  if (!isNonEmptyString(userId)) return fail(res, 'userId is required');
-  if (!VALID_ROLES.includes(role)) {
-    return fail(res, 'role must be STUDENT or TEACHER');
-  }
-  req.actor = { userId, role };
-  return next();
-};
 
 const validateCreateDoubt = (req, res, next) => {
   const { question, subject, priority } = req.body || {};
@@ -37,9 +22,22 @@ const validateCreateDoubt = (req, res, next) => {
   return next();
 };
 
-router.post('/', validateActor, validateCreateDoubt, controller.submitDoubt);
-router.get('/mine', validateActor, controller.getMyDoubts);
-router.get('/', validateActor, controller.getAllDoubts);
-router.patch('/:id/resolve', validateActor, controller.resolveDoubt);
+// Every doubt route is authenticated; identity comes from the JWT (req.user),
+// never from the request body. Role access is enforced with requireRole.
+router.post(
+  '/',
+  authenticate,
+  requireRole('STUDENT'),
+  validateCreateDoubt,
+  controller.submitDoubt
+);
+router.get('/mine', authenticate, requireRole('STUDENT'), controller.getMyDoubts);
+router.get('/', authenticate, requireRole('TEACHER'), controller.getAllDoubts);
+router.patch(
+  '/:id/resolve',
+  authenticate,
+  requireRole('TEACHER'),
+  controller.resolveDoubt
+);
 
 module.exports = router;

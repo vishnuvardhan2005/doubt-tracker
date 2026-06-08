@@ -83,3 +83,52 @@ Check for:
 5. Anything that'll be hard to extend when we add auth in phase 4
 
 List issues found. Fix anything critical before I commit.
+
+### Auth impl
+Build JWT auth with httpOnly cookies.
+
+Endpoints needed:
+POST /api/auth/register  → name, email, password, role
+POST /api/auth/login     → email, password → sets httpOnly cookie
+POST /api/auth/logout    → clears the cookie
+
+Middleware:
+- authenticate: verifies JWT from cookie, sets req.user = { userId, role, email }
+- requireRole(role): checks req.user.role matches required role
+
+Do not touch the doubts API yet. Auth layer only.
+
+### Auth in APIs
+Update the doubts API to use auth middleware.
+
+Replace all temporary userId/role from request body with req.user.
+
+Rules:
+- All doubt routes require authenticate middleware
+- POST /api/doubts         → STUDENT only
+- GET  /api/doubts/mine    → STUDENT only, filter by req.user.userId
+- GET  /api/doubts         → TEACHER only  
+- PATCH /api/doubts/:id/resolve → TEACHER only
+
+Never use userId from request body anywhere in doubts API.
+
+### Auth UI
+Update the React UI to add:
+- Register page: name, email, password, role selector
+- Login page: email, password
+- On login success, cookie is set automatically (httpOnly, 
+  so JS can't read it — that's correct)
+- Remove all temporary userId/role inputs from the UI
+- Add a logout button that calls POST /api/auth/logout
+
+### Reviuew
+Security review of everything built in phase 4.
+
+Check:
+1. Any route missing authenticate middleware
+2. Any place userId is read from request body instead of req.user
+3. Any place password could appear in a response or log
+4. Any place a student could access another student's data
+5. Cookie security settings correct for production
+
+List every issue found.

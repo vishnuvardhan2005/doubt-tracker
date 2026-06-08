@@ -1,19 +1,15 @@
 const doubtService = require('../services/doubtService');
 
 /*
- * PHASE 3 TEMPORARY: the actor (userId + role) is resolved by validateActor from
- * the request body/query and stashed on req.actor. Phase 4 replaces that with the
- * verified JWT, per the security rule "never trust client-sent userId".
+ * Identity always comes from req.user (set by the authenticate middleware from
+ * the verified JWT) — never from the request body. Role authorization is
+ * enforced at the route level via requireRole, so controllers only deal with
+ * the action itself.
  */
 
 const submitDoubt = async (req, res, next) => {
-  const { userId, role } = req.actor;
+  const { userId } = req.user;
   const { question, subject, priority } = req.body;
-  if (role !== 'STUDENT') {
-    return res
-      .status(403)
-      .json({ error: 'Only students can submit doubts', code: 'FORBIDDEN' });
-  }
   try {
     const doubt = await doubtService.createDoubt({
       question,
@@ -28,12 +24,7 @@ const submitDoubt = async (req, res, next) => {
 };
 
 const getMyDoubts = async (req, res, next) => {
-  const { userId, role } = req.actor;
-  if (role !== 'STUDENT') {
-    return res
-      .status(403)
-      .json({ error: 'Only students can view their doubts', code: 'FORBIDDEN' });
-  }
+  const { userId } = req.user;
   try {
     const doubts = await doubtService.getDoubtsByStudent(userId);
     return res.json(doubts);
@@ -43,12 +34,6 @@ const getMyDoubts = async (req, res, next) => {
 };
 
 const getAllDoubts = async (req, res, next) => {
-  const { role } = req.actor;
-  if (role !== 'TEACHER') {
-    return res
-      .status(403)
-      .json({ error: 'Only teachers can view all doubts', code: 'FORBIDDEN' });
-  }
   try {
     const doubts = await doubtService.getAllDoubts();
     return res.json(doubts);
@@ -58,13 +43,8 @@ const getAllDoubts = async (req, res, next) => {
 };
 
 const resolveDoubt = async (req, res, next) => {
-  const { role, userId } = req.actor;
+  const { userId } = req.user;
   const { id } = req.params;
-  if (role !== 'TEACHER') {
-    return res
-      .status(403)
-      .json({ error: 'Only teachers can resolve doubts', code: 'FORBIDDEN' });
-  }
   try {
     const existing = await doubtService.getDoubtById(id);
     if (!existing) {
