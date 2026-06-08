@@ -1,0 +1,31 @@
+{
+  "name": "server",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Doubt Tracker — Express API",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node --watch --env-file=.env server.js",
+    "start": "node --env-file=.env server.js",
+    "test": "jest",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "node --env-file=.env prisma/seed.ts",
+    "db:studio": "prisma studio"
+  },
+  "jest": {
+    "testEnvironment": "node"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3"
+  },
+  "devDependencies": {
+    "jest": "^30.4.2",
+    "prisma": "^6.19.3",
+    "supertest": "^7.2.2"
+  }
+}

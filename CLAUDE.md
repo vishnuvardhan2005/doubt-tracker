@@ -16,6 +16,21 @@
   /services    → DB access via Prisma (repository pattern)
   /tests       → API tests
 
+## Approved dependencies
+Only these packages may be used. Adding anything else must be flagged first.
+
+Runtime:
+- express, @prisma/client, jsonwebtoken, bcrypt, cookie-parser (server)
+- react, react-dom (client)
+
+Dev:
+- prisma, jest, supertest (server)
+- vite, @vitejs/plugin-react, tailwindcss, @tailwindcss/vite, eslint + plugins (client)
+- concurrently (root — runs client + server together)
+
+Env files live in /server (.env, .env.example) — they hold backend-only secrets.
+Logging goes through /server/config/logger.js (no console.log elsewhere).
+
 ## Coding conventions
 - One responsibility per function
 - Input validation at route level (before controller)
