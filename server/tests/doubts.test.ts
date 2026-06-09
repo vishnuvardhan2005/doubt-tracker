@@ -180,3 +180,115 @@ describe('PATCH /api/doubts/:id/resolve', () => {
     expect(res.body.code).toBe('NOT_FOUND');
   });
 });
+
+describe('GET /api/doubts — priority/status filters (v2)', () => {
+  // One doubt per (priority, status) combination needed by these tests.
+  const seedMixed = (studentId: string, teacherId: string) =>
+    prisma.doubt.createMany({
+      data: [
+        { question: 'low-open', subject: 'Maths', priority: 'LOW', status: 'OPEN', studentId },
+        { question: 'high-open', subject: 'Maths', priority: 'HIGH', status: 'OPEN', studentId },
+        {
+          question: 'medium-resolved',
+          subject: 'Maths',
+          priority: 'MEDIUM',
+          status: 'RESOLVED',
+          studentId,
+          resolvedBy: teacherId,
+        },
+      ],
+    });
+
+  it('?priority=HIGH returns only HIGH doubts', async () => {
+    const teacher = await createUser('TEACHER', 't@test.dev');
+    const student = await createUser('STUDENT', 's@test.dev');
+    await seedMixed(student.id, teacher.id);
+
+    const res = await request(app)
+      .get('/api/doubts?priority=HIGH')
+      .set('Cookie', authCookie(teacher));
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(1);
+    expect(
+      res.body.every((d: { priority: string }) => d.priority === 'HIGH')
+    ).toBe(true);
+  });
+
+  it('?status=OPEN returns only OPEN doubts', async () => {
+    const teacher = await createUser('TEACHER', 't@test.dev');
+    const student = await createUser('STUDENT', 's@test.dev');
+    await seedMixed(student.id, teacher.id);
+
+    const res = await request(app)
+      .get('/api/doubts?status=OPEN')
+      .set('Cookie', authCookie(teacher));
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(2);
+    expect(
+      res.body.every((d: { status: string }) => d.status === 'OPEN')
+    ).toBe(true);
+  });
+
+  it('?priority=HIGH&status=OPEN combines both filters', async () => {
+    const teacher = await createUser('TEACHER', 't@test.dev');
+    const student = await createUser('STUDENT', 's@test.dev');
+    await seedMixed(student.id, teacher.id);
+
+    const res = await request(app)
+      .get('/api/doubts?priority=HIGH&status=OPEN')
+      .set('Cookie', authCookie(teacher));
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(1);
+    expect(res.body[0]).toMatchObject({ priority: 'HIGH', status: 'OPEN' });
+  });
+
+  it('rejects an invalid priority value with 400', async () => {
+    const teacher = await createUser('TEACHER', 't@test.dev');
+
+    const res = await request(app)
+      .get('/api/doubts?priority=URGENT')
+      .set('Cookie', authCookie(teacher));
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('rejects an invalid status value with 400', async () => {
+    const teacher = await createUser('TEACHER', 't@test.dev');
+
+    const res = await request(app)
+      .get('/api/doubts?status=CLOSED')
+      .set('Cookie', authCookie(teacher));
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('VALIDATION_ERROR');
+  });
+});
+
+describe('GET /api/doubts/mine — priority sort (v2)', () => {
+  it('?sort=priority orders HIGH before MEDIUM before LOW', async () => {
+    const student = await createUser('STUDENT', 's@test.dev');
+    // Inserted out of priority order to prove the sort, not insertion order.
+    await prisma.doubt.createMany({
+      data: [
+        { question: 'low', subject: 'Maths', priority: 'LOW', studentId: student.id },
+        { question: 'high', subject: 'Maths', priority: 'HIGH', studentId: student.id },
+        { question: 'medium', subject: 'Maths', priority: 'MEDIUM', studentId: student.id },
+      ],
+    });
+
+    const res = await request(app)
+      .get('/api/doubts/mine?sort=priority')
+      .set('Cookie', authCookie(student));
+
+    expect(res.status).toBe(200);
+    expect(res.body.map((d: { priority: string }) => d.priority)).toEqual([
+      'HIGH',
+      'MEDIUM',
+      'LOW',
+    ]);
+  });
+});

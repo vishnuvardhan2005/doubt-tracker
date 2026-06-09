@@ -33,9 +33,18 @@ export const logout = () => request('/auth/logout', { method: 'POST' });
 export const submitDoubt = (doubt) =>
   request('/doubts', { method: 'POST', body: doubt });
 
-export const getMyDoubts = () => request('/doubts/mine');
+export const getMyDoubts = ({ sort } = {}) => {
+  const qs = sort ? `?sort=${encodeURIComponent(sort)}` : '';
+  return request(`/doubts/mine${qs}`);
+};
 
-export const getAllDoubts = () => request('/doubts');
+export const getAllDoubts = ({ priority, status } = {}) => {
+  const params = new URLSearchParams();
+  if (priority) params.set('priority', priority);
+  if (status) params.set('status', status);
+  const qs = params.toString();
+  return request(`/doubts${qs ? `?${qs}` : ''}`);
+};
 
 export const resolveDoubt = (doubtId) =>
   request(`/doubts/${doubtId}/resolve`, { method: 'PATCH' });

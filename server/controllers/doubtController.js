@@ -25,8 +25,11 @@ const submitDoubt = async (req, res, next) => {
 
 const getMyDoubts = async (req, res, next) => {
   const { userId } = req.user;
+  const sortByPriority = req.query.sort === 'priority';
   try {
-    const doubts = await doubtService.getDoubtsByStudent(userId);
+    const doubts = await doubtService.getDoubtsByStudent(userId, {
+      sortByPriority,
+    });
     return res.json(doubts);
   } catch (err) {
     return next(err);
@@ -34,8 +37,9 @@ const getMyDoubts = async (req, res, next) => {
 };
 
 const getAllDoubts = async (req, res, next) => {
+  const { priority, status } = req.query;
   try {
-    const doubts = await doubtService.getAllDoubts();
+    const doubts = await doubtService.getAllDoubts({ priority, status });
     return res.json(doubts);
   } catch (err) {
     return next(err);

@@ -132,3 +132,37 @@ Check:
 5. Cookie security settings correct for production
 
 List every issue found.
+
+### New Sort feature
+A new feature has been added to SPEC.md under 
+"Feature: Priority Filter + Sort (v2)". Read it carefully.
+
+Only touch:
+- server/routes/doubts.ts
+- server/controllers/doubts.ts  
+- server/services/doubts.ts
+- client src for teacher and student doubt views
+
+Do not touch auth middleware, Prisma schema, 
+POST or PATCH endpoints, or any other file.
+
+### New Feature tests
+Add tests in server/tests/doubts.test.ts for the new 
+filter and sort functionality.
+
+Cover:
+- GET /api/doubts?priority=HIGH returns only HIGH doubts
+- GET /api/doubts?status=OPEN returns only open doubts  
+- GET /api/doubts?priority=HIGH&status=OPEN combines filters
+- GET /api/doubts/mine?sort=priority returns HIGH before MEDIUM before LOW
+- Invalid priority value returns 400
+- Invalid status value returns 400
+
+### New Feature review
+Review the priority filter changes.
+
+Check:
+1. Anything changed beyond what the spec asked for?
+2. Are query params validated — no injection risk?
+3. Is sort/filter logic in the service layer, not leaking into controller?
+4. Edge cases — empty filters, invalid values, no results?

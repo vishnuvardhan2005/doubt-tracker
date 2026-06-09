@@ -8,14 +8,23 @@ const createDoubt = ({ question, subject, priority, studentId }) =>
     data: { question, subject, priority, studentId },
   });
 
-const getDoubtsByStudent = (studentId) =>
+const getDoubtsByStudent = (studentId, { sortByPriority = false } = {}) =>
   prisma.doubt.findMany({
     where: { studentId },
-    orderBy: { createdAt: 'desc' },
+    // The Priority enum is declared LOW, MEDIUM, HIGH, so 'desc' orders
+    // HIGH → MEDIUM → LOW. createdAt is the tiebreaker (and the default sort).
+    orderBy: sortByPriority
+      ? [{ priority: 'desc' }, { createdAt: 'desc' }]
+      : { createdAt: 'desc' },
   });
 
-const getAllDoubts = () =>
+const getAllDoubts = ({ priority, status } = {}) =>
   prisma.doubt.findMany({
+    // Only defined filters are applied; an undefined key is left out entirely.
+    where: {
+      ...(priority ? { priority } : {}),
+      ...(status ? { status } : {}),
+    },
     orderBy: { createdAt: 'desc' },
     // Only the student's name is exposed — never email/password.
     include: { student: { select: { id: true, name: true } } },

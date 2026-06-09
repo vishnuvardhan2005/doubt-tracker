@@ -1,29 +1,39 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { getAllDoubts, resolveDoubt } from '../api';
 import { StatusBadge, PriorityBadge } from './Badges';
+import { PRIORITIES } from '../constants';
+
+const STATUSES = ['OPEN', 'RESOLVED'];
+const selectClass = 'rounded border border-gray-300 px-2 py-1 text-sm';
 
 export default function AllDoubts() {
   const [doubts, setDoubts] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(null);
   const [resolvingId, setResolvingId] = useState(null);
+  const [priority, setPriority] = useState('');
+  const [status, setStatus] = useState('');
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setError(null);
     try {
-      const data = await getAllDoubts();
+      // Empty string = no filter, so omit it from the request.
+      const data = await getAllDoubts({
+        priority: priority || undefined,
+        status: status || undefined,
+      });
       setDoubts(data);
     } catch (err) {
       setError(err.message);
     } finally {
       setLoaded(true);
     }
-  };
+  }, [priority, status]);
 
-  // Identity comes from the auth cookie, so just load on mount.
+  // Reload on mount and whenever a filter changes.
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   const handleResolve = async (id) => {
     setError(null);
@@ -38,12 +48,44 @@ export default function AllDoubts() {
     }
   };
 
-  if (!loaded) return <p className="text-sm text-gray-500">Loading…</p>;
-
   return (
     <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <label className="text-sm text-gray-600">
+          Priority{' '}
+          <select
+            className={selectClass}
+            value={priority}
+            onChange={(e) => setPriority(e.target.value)}
+          >
+            <option value="">All</option>
+            {PRIORITIES.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="text-sm text-gray-600">
+          Status{' '}
+          <select
+            className={selectClass}
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+          >
+            <option value="">All</option>
+            {STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
       {error && <p className="text-sm text-red-600">{error}</p>}
-      {doubts.length === 0 && !error && (
+      {loaded && !error && doubts.length === 0 && (
         <p className="text-sm text-gray-500">No doubts.</p>
       )}
 

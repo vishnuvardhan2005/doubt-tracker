@@ -43,3 +43,27 @@ Doubt
 - resolvedBy (FK → User, nullable)
 - createdAt
 - updatedAt
+
+## Feature: Priority Filter + Sort (v2)
+<!-- added: phase 5 -->
+
+### What it does
+- Teacher: filter GET /api/doubts by priority and/or status via query params
+- Student: sort GET /api/doubts/mine by priority (high → medium → low)
+
+### API changes
+GET /api/doubts?priority=HIGH&status=OPEN    → teacher
+GET /api/doubts/mine?sort=priority           → student
+
+### UI changes
+- Teacher view: two dropdowns — filter by priority, filter by status
+- Student view: sort toggle — sort by priority
+
+### What does NOT change
+- No new DB tables or columns (priority field already exists)
+- No auth changes
+- No changes to POST or PATCH endpoints
+
+## Features in progress
+- priority-filter branch: adds query param filtering to GET /api/doubts 
+  and sort to GET /api/doubts/mine. No schema changes. No auth changes.
