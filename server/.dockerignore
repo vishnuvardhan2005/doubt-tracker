@@ -1,0 +1,19 @@
+# Dependencies are installed fresh inside the image
+node_modules
+npm-debug.log*
+
+# Secrets / local env — provided by the platform at runtime, never baked in
+.env
+.env.*
+!.env.example
+
+# Not needed to run the server
+tests
+tsconfig.json
+Dockerfile
+.dockerignore
+
+# VCS / editor noise
+.git
+.gitignore
+*.md

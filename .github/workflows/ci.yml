@@ -1,0 +1,62 @@
+name: CI
+
+# Run on every push (any branch) and on PRs targeting main. CI only — no deploy.
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+
+# Cancel superseded runs on the same ref to save minutes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Server tests
+    runs-on: ubuntu-latest
+
+    # All run steps execute in /server (the backend lives there).
+    defaults:
+      run:
+        working-directory: server
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install dependencies (server only)
+        run: npm ci
+
+      # The test suite reads its config from server/.env (npm test uses
+      # `node --env-file=.env`, which errors if the file is missing). Write it
+      # from the secret. JWT_SECRET is only used to sign ephemeral test tokens,
+      # so a fixed non-sensitive value is fine here.
+      - name: Configure test environment
+        env:
+          TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+        run: |
+          {
+            echo "TEST_DATABASE_URL=$TEST_DATABASE_URL"
+            echo "JWT_SECRET=ci-test-secret"
+            echo "NODE_ENV=test"
+          } > .env
+
+      # Generate the Prisma client so the tests can instantiate PrismaClient.
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      # A non-zero exit here fails the job (and thus the workflow).
+      - name: Run tests
+        run: npm test

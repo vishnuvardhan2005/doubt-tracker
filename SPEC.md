@@ -67,3 +67,10 @@ GET /api/doubts/mine?sort=priority           → student
 ## Features in progress
 - priority-filter branch: adds query param filtering to GET /api/doubts 
   and sort to GET /api/doubts/mine. No schema changes. No auth changes.
+
+  ## Deployment
+- Backend: Docker container
+- CI: GitHub Actions — runs tests on every push
+- CD: deploy to cloud on merge to main
+- Env vars: never in code, never in Dockerfile, always in platform secret manager
+- .env.example must stay up to date with every new variable added

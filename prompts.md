@@ -166,3 +166,15 @@ Check:
 2. Are query params validated — no injection risk?
 3. Is sort/filter logic in the service layer, not leaking into controller?
 4. Edge cases — empty filters, invalid values, no results?
+
+### Server dockerfile
+Write a Dockerfile for the Express backend in /server.
+
+Requirements:
+- Node 20 Alpine base image
+- Multi-stage build: deps stage + production stage
+- Production stage contains only what's needed to run
+- No .env file copied in — env vars come from the platform at runtime
+- Runs as non-root user
+- Exposes PORT from environment variable
+- Health check on GET /health
