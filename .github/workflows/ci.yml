@@ -80,3 +80,42 @@ jobs:
       # A non-zero exit here fails the job (and thus the workflow).
       - name: Run tests
         run: npm test
+
+  deploy:
+    name: Deploy to Render
+    # Only after the test job succeeds...
+    needs: test
+    # ...and only on a push to main (never on PRs or other branches).
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      # Trigger a Render deploy via its API. Render builds the Docker image from
+      # server/Dockerfile (configured on the Render service) and rolls it out.
+      - name: Trigger Render deploy
+        env:
+          DEPLOY_API_KEY: ${{ secrets.DEPLOY_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+        run: |
+          http_code=$(curl -sS -o response.json -w '%{http_code}' \
+            -X POST "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" \
+            -H "Authorization: Bearer $DEPLOY_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{"clearCache":"do_not_clear"}')
+          echo "Render API responded: $http_code"
+          cat response.json
+          # 2xx = deploy accepted; anything else fails the job.
+          if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
+            echo "::error::Render deploy trigger failed (HTTP $http_code)"
+            exit 1
+          fi
+
+      # Simple success/failure notification via the workflow status.
+      - name: Report deploy status
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "::notice::✅ Deploy to Render triggered successfully"
+          else
+            echo "::error::❌ Deploy to Render failed"
+          fi
