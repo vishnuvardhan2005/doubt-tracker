@@ -20,6 +20,29 @@ jobs:
     name: Server tests
     runs-on: ubuntu-latest
 
+    # Ephemeral Postgres for the test run — isolated per job, wiped with the
+    # runner. The suite's `db push --accept-data-loss` and per-test table wipe
+    # operate on this throwaway DB, never a shared/remote one.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: doubttracker_test
+        ports:
+          - 5432:5432
+        # Gate the job until Postgres accepts connections.
+        options: >-
+          --health-cmd "pg_isready -U test -d doubttracker_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    # Point the test DB at the service container above.
+    env:
+      TEST_DATABASE_URL: postgresql://test:test@localhost:5432/doubttracker_test
+
     # All run steps execute in /server (the backend lives there).
     defaults:
       run:
@@ -40,12 +63,9 @@ jobs:
         run: npm ci
 
       # The test suite reads its config from server/.env (npm test uses
-      # `node --env-file=.env`, which errors if the file is missing). Write it
-      # from the secret. JWT_SECRET is only used to sign ephemeral test tokens,
-      # so a fixed non-sensitive value is fine here.
+      # `node --env-file=.env`, which errors if the file is missing). JWT_SECRET
+      # only signs ephemeral test tokens, so a fixed non-sensitive value is fine.
       - name: Configure test environment
-        env:
-          TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
         run: |
           {
             echo "TEST_DATABASE_URL=$TEST_DATABASE_URL"
